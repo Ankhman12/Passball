@@ -3,10 +3,16 @@
 
 #include "MyCharacterMovementComponent.h"
 #include "GameFramework/Character.h"
-#include "ECustomMovementMode.h"
+#include "EParkourMovementMode.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+//
+//UMyCharacterMovementComponent::UMyCharacterMovementComponent(const class FObjectInitializer& ObjectInitializer) :
+//	Super(ObjectInitializer)
+//{
+//	
+//}
 
 FNetworkPredictionData_Client* UMyCharacterMovementComponent::GetPredictionData_Client() const
 {
@@ -31,17 +37,21 @@ bool UMyCharacterMovementComponent::BeginWallRun()
 	if (WallRunKeysDown == true)
 	{
 		// Set the movement mode to wall running. UE4 will handle replicating this change to all connected clients.
-		SetMovementMode(EMovementMode::MOVE_Custom, ECustomMovementMode::CMOVE_WallRunning);
+		SetMovementMode(EMovementMode::MOVE_Custom, EParkourMovementMode::CMOVE_WallRunning);
 		return true;
 	}
 
 	return false;
 }
 
-void UMyCharacterMovementComponent::EndWallRun()
+void UMyCharacterMovementComponent::EndWallRun() //(float resetTime)
 {
+	//Reset gravity
+	GravityScale = DefaultGravity;
 	// Set the movement mode back to falling
 	SetMovementMode(EMovementMode::MOVE_Falling);
+	//Suppress wall run
+	//SuppressWallRun(resetTime);
 }
 
 bool UMyCharacterMovementComponent::AreRequiredWallRunKeysDown() const
@@ -50,7 +60,7 @@ bool UMyCharacterMovementComponent::AreRequiredWallRunKeysDown() const
 	if (GetPawnOwner()->IsLocallyControlled() == false)
 		return false;
 
-	// Make sure the spring key is down (the player may only wall run if he's hold sprint)
+	// Make sure the sprint key is down (the player may only wall run if he's hold sprint)
 	TArray<FInputActionKeyMapping> sprintKeyMappings;
 	UInputSettings::GetInputSettings()->GetActionMappingByName("Sprint", sprintKeyMappings);
 	for (FInputActionKeyMapping& sprintKeyMapping : sprintKeyMappings)
@@ -135,6 +145,9 @@ bool UMyCharacterMovementComponent::CanSurfaceBeWallRan(const FVector& surface_n
 	FVector normalNoZ = FVector(surface_normal.X, surface_normal.Y, 0.0f);
 	normalNoZ.Normalize();
 
+	//Save current normal to use for ...
+	//WallNormal = surface_normal;
+
 	// Find the angle of the wall
 	float wallAngle = FMath::Acos(FVector::DotProduct(normalNoZ, surface_normal));
 
@@ -149,7 +162,7 @@ bool UMyCharacterMovementComponent::IsCustomMovementMode(uint8 custom_movement_m
 
 void UMyCharacterMovementComponent::OnActorHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (IsCustomMovementMode(ECustomMovementMode::CMOVE_WallRunning))
+	if (IsCustomMovementMode(EParkourMovementMode::CMOVE_WallRunning))
 		return;
 
 	// Make sure we're falling. Wall running can only begin if we're currently in the air
@@ -200,7 +213,7 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 	{
 		if (SprintKeyDown == true)
 		{
-			// Only set WantsToSprint to true if the player is moving forward (so that he can't sprint backwards)
+			// Only set WantsToSprint to true if the player is moving forward (so that they can't sprint backwards)
 			FVector velocity2D = GetPawnOwner()->GetVelocity();
 			FVector forward2D = GetPawnOwner()->GetActorForwardVector();
 			velocity2D.Z = 0.0f;
@@ -217,6 +230,25 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 
 		// Update if the required wall run key(s) are being pressed
 		WallRunKeysDown = AreRequiredWallRunKeysDown();
+		//if (MovementMode == EMovementMode::MOVE_Custom && CustomMovementMode == EParkourMovementMode::CMOVE_WallRunning) {
+		//	if (WallRunSide == EWallRunSide::kLeft)
+		//	{
+				//Tilt camera right
+		//		FRotator* newRotation = new FRotator(-TargetCameraXRotation, CharacterOwner->Controller->GetControlRotation().Pitch, CharacterOwner->Controller->GetControlRotation().Yaw);
+		//		CharacterOwner->Controller->SetControlRotation(FMath::RInterpTo(CharacterOwner->Controller->GetControlRotation(), *newRotation, DeltaTime, 10.0f));
+		//	}
+		//	else if (WallRunSide == EWallRunSide::kRight)
+		//	{
+				//Tilt camera left
+		//		FRotator* newRotation = new FRotator(TargetCameraXRotation, CharacterOwner->Controller->GetControlRotation().Pitch, CharacterOwner->Controller->GetControlRotation().Yaw);
+		//		CharacterOwner->Controller->SetControlRotation(FMath::RInterpTo(CharacterOwner->Controller->GetControlRotation(), *newRotation, DeltaTime, 10.0f));
+		//	}
+		//}
+		//else {
+			//Reset camera by rotating upright
+		//	FRotator* newRotation = new FRotator(0.0f, CharacterOwner->Controller->GetControlRotation().Pitch, CharacterOwner->Controller->GetControlRotation().Yaw);
+		//	CharacterOwner->Controller->SetControlRotation(FMath::RInterpTo(CharacterOwner->Controller->GetControlRotation(), *newRotation, DeltaTime, 10.0f));
+		//}
 	}
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -236,6 +268,7 @@ void UMyCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 	// Read the values from the compressed flags
 	WantsToSprint = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
 	WallRunKeysDown = (Flags & FSavedMove_Character::FLAG_Custom_1) != 0;
+	//CrouchKeyDown = (Flags & FSavedMove_Character::FLAG_Custom_2) != 0;
 }
 
 void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -245,8 +278,10 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 		switch (CustomMovementMode)
 		{
 			// Did we just start wall running?
-		case ECustomMovementMode::CMOVE_WallRunning:
+		case EParkourMovementMode::CMOVE_WallRunning:
 		{
+			
+			//DEPRECATED
 			// Stop current movement and constrain the character to only horizontal movement
 			StopMovementImmediately();
 			bConstrainToPlane = true;
@@ -261,7 +296,7 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 		switch (PreviousCustomMode)
 		{
 			// Did we just finish wall running?
-		case ECustomMovementMode::CMOVE_WallRunning:
+		case EParkourMovementMode::CMOVE_WallRunning:
 		{
 			// Unconstrain the character from horizontal movement
 			bConstrainToPlane = false;
@@ -282,7 +317,7 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 
 	switch (CustomMovementMode)
 	{
-	case ECustomMovementMode::CMOVE_WallRunning:
+	case EParkourMovementMode::CMOVE_WallRunning:
 	{
 		PhysWallRunning(deltaTime, Iterations);
 		break;
@@ -293,6 +328,33 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 	Super::PhysCustom(deltaTime, Iterations);
 }
 
+//FVector UMyCharacterMovementComponent::FindPlayerToWallVector()
+//{
+//	FVector vec = GetActorLocation() - WallNormal;
+//	vec = vec.Size() * WallNormal;
+//	return vec;
+//}
+
+//FVector UMyCharacterMovementComponent::FindWallForwardsVector()
+//{
+//	FVector* up = new FVector(0, 0, 1);
+//	FVector forwardVec = WallNormal.CrossProduct(WallNormal, *up);
+//	FVector vec = forwardVec * WallRunSpeed * WallRunDirection;
+//	return vec;
+//}
+
+//void UMyCharacterMovementComponent::SuppressWallRun(float delay) 
+//{
+//	WallRunSuppressed = true;
+//	GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, this, &UMyCharacterMovementComponent::ResetWallRunSuppression, delay, false);
+//}
+
+//void UMyCharacterMovementComponent::ResetWallRunSuppression()
+//{
+//	GetWorld()->GetTimerManager().ClearTimer(WallRunTimerHandle);
+//	WallRunSuppressed = false;
+//}
+
 void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
 {
 	// IMPORTANT NOTE: This function (and all other Phys* functions) will be called on characters with ROLE_Authority and ROLE_AutonomousProxy
@@ -302,7 +364,7 @@ void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Itera
 	// Make sure the required wall run keys are still down
 	if (WallRunKeysDown == false)
 	{
-		EndWallRun();
+		EndWallRun();//1.0f);
 		return;
 	}
 
@@ -311,9 +373,16 @@ void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Itera
 	// tolerance value so we don't immiedetly fall of the wall 
 	if (IsNextToWall(LineTraceVerticalTolerance) == false)
 	{
-		EndWallRun();
+		EndWallRun(); //1.0f);
 		return;
 	}
+
+	//Stick Player to wall
+	//CharacterOwner->LaunchCharacter(FindPlayerToWallVector(), false, false);
+	//Push Player forwards along the wall
+	//CharacterOwner->LaunchCharacter(FindWallForwardsVector(), false, !UseWallRunGravity);
+	// Drop the gravity
+	//GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, deltaTime, 10.0f);
 
 	// Set the owning player's new velocity based on the wall run direction
 	FVector newVelocity = WallRunDirection;
@@ -382,9 +451,9 @@ void UMyCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float r
 	Super::ProcessLanded(Hit, remainingTime, Iterations);
 
 	// If we landed while wall running, make sure we stop wall running
-	if (IsCustomMovementMode(ECustomMovementMode::CMOVE_WallRunning))
+	if (IsCustomMovementMode(EParkourMovementMode::CMOVE_WallRunning))
 	{
-		EndWallRun();
+		EndWallRun();//1.0f);
 	}
 }
 
@@ -395,6 +464,7 @@ void FSavedMove_My::Clear()
 	// Clear all values
 	SavedWantsToSprint = 0;
 	SavedWallRunKeysDown = 0;
+	//SavedCrouchKeyDown = 0;
 }
 
 uint8 FSavedMove_My::GetCompressedFlags() const
@@ -404,8 +474,8 @@ uint8 FSavedMove_My::GetCompressedFlags() const
 	/* There are 4 custom move flags for us to use. Below is what each is currently being used for:
 	FLAG_Custom_0		= 0x10, // Sprinting
 	FLAG_Custom_1		= 0x20, // WallRunning
-	FLAG_Custom_2		= 0x40, // Unused
-	FLAG_Custom_3		= 0x80, // Unused
+	FLAG_Custom_2		= 0x40, // Crouching
+	FLAG_Custom_3		= 0x80, // Unused, Dashing?
 	*/
 
 	// Write to the compressed flags 
@@ -413,7 +483,8 @@ uint8 FSavedMove_My::GetCompressedFlags() const
 		Result |= FLAG_Custom_0;
 	if (SavedWallRunKeysDown)
 		Result |= FLAG_Custom_1;
-
+	//if (SavedCrouchKeyDown)
+	//	Result |= FLAG_Custom_2;
 	return Result;
 }
 
@@ -423,7 +494,8 @@ bool FSavedMove_My::CanCombineWith(const FSavedMovePtr& NewMovePtr, ACharacter* 
 
 	// As an optimization, check if the engine can combine saved moves.
 	if (SavedWantsToSprint != NewMove->SavedWantsToSprint ||
-		SavedWallRunKeysDown != NewMove->SavedWallRunKeysDown)
+		SavedWallRunKeysDown != NewMove->SavedWallRunKeysDown) //|| 
+		//SavedCrouchKeyDown != NewMove->SavedCrouchKeyDown)
 	{
 		return false;
 	}
@@ -441,6 +513,7 @@ void FSavedMove_My::SetMoveFor(ACharacter* Character, float InDeltaTime, FVector
 		// Copy values into the saved move
 		SavedWantsToSprint = charMov->WantsToSprint;
 		SavedWallRunKeysDown = charMov->WallRunKeysDown;
+		//SavedCrouchKeyDown = charMov->CrouchKeyDown;
 	}
 }
 
@@ -454,6 +527,7 @@ void FSavedMove_My::PrepMoveFor(class ACharacter* Character)
 		// Copt values out of the saved move
 		charMov->WantsToSprint = SavedWantsToSprint;
 		charMov->WallRunKeysDown = SavedWallRunKeysDown;
+		//charMov->CrouchKeyDown = SavedCrouchKeyDown;
 	}
 }
 

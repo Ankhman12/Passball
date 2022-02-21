@@ -11,7 +11,7 @@
  *
  */
 UCLASS(BlueprintType)
-class CHARACTERNETWORKING_API UMyCharacterMovementComponent : public UCharacterMovementComponent
+class UMyCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
 
@@ -37,6 +37,18 @@ private:
 	// The player's velocity while wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float WallRunSpeed = 625.0f;
+	//Default gravity to reset after wall running
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		//float DefaultGravity = 10.0f;
+	//Gravity value to use while wall running
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		//float WallRunTargetGravity = 0.25f;
+	//Boolean to determine if wall run uses gravity
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		//bool UseWallRunGravity = false;
+	//Rotation to set camera to when wall running
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		//float TargetCameraXRotation = 15.0f;
 #pragma endregion
 
 #pragma region Sprinting Functions
@@ -52,7 +64,12 @@ public:
 		bool BeginWallRun();
 	// Ends the character's wall run
 	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		void EndWallRun();
+		void EndWallRun(); //float resetTime);
+	//Stops the character from being able to wall run for a given delay
+	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
+		//void SuppressWallRun(float delay);
+	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
+		//void ResetWallRunSuppression();
 	// Returns true if the required wall run keys are currently down
 	bool AreRequiredWallRunKeysDown() const;
 	// Returns true if the player is next to a wall that can be wall ran
@@ -63,6 +80,10 @@ public:
 	bool CanSurfaceBeWallRan(const FVector& surface_normal) const;
 	// Returns true if the movement mode is custom and matches the provided custom movement mode
 	bool IsCustomMovementMode(uint8 custom_movement_mode) const;
+	// Returns the vector used to stick the player to the wall
+	//FVector FindPlayerToWallVector();
+	// Returns vector used tp push player forwards along the wall
+	//FVector FindWallForwardsVector();
 private:
 	// Called when the owning actor hits something (to begin the wall run)
 	UFUNCTION()
@@ -89,6 +110,7 @@ public:
 private:
 	uint8 WantsToSprint : 1;
 	uint8 WallRunKeysDown : 1;
+	//uint8 CrouchKeyDown : 1;
 #pragma endregion
 
 #pragma region Private Variables
@@ -96,8 +118,14 @@ private:
 	bool SprintKeyDown = false;
 	// The direction the character is currently wall running in
 	FVector WallRunDirection;
-	// The side of the wall the player is running on.
+	// The side of the wall the player is running on
 	EWallRunSide WallRunSide;
+	// Normal vector of the wall the player is running on
+	//FVector& WallNormal = *(new FVector(0.0f,0.0f,0.0f));
+	// True if wall running ability is suppressed
+	//bool WallRunSuppressed = false;
+	// Timer handler for wall running
+	//FTimerHandle WallRunTimerHandle;
 #pragma endregion
 };
 
@@ -122,6 +150,7 @@ public:
 private:
 	uint8 SavedWantsToSprint : 1;
 	uint8 SavedWallRunKeysDown : 1;
+	//uint8 SavedCrouchKeyDown : 1;
 };
 
 class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character

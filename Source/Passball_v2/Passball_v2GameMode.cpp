@@ -2,7 +2,7 @@
 
 #include "Passball_v2GameMode.h"
 #include "Passball_v2HUD.h"
-#include "Passball_v2Character.h"
+#include "APassball_v2Character.h"
 #include "UObject/ConstructorHelpers.h"
 
 APassball_v2GameMode::APassball_v2GameMode()
