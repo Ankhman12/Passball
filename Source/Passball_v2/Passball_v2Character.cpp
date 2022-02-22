@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Passball_v2Character.h"
+#include "MyCharacterMovementComponent.h"
 #include "Passball_v2Projectile.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
@@ -17,7 +18,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 //////////////////////////////////////////////////////////////////////////
 // APassball_v2Character
 
-APassball_v2Character::APassball_v2Character()
+APassball_v2Character::APassball_v2Character(const class FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer.SetDefaultSubobjectClass<UMyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
@@ -68,17 +70,17 @@ APassball_v2Character::APassball_v2Character()
 
 	// Create a gun and attach it to the right-hand VR controller.
 	// Create a gun mesh component
-	VR_Gun = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("VR_Gun"));
-	VR_Gun->SetOnlyOwnerSee(false);			// otherwise won't be visible in the multiplayer
-	VR_Gun->bCastDynamicShadow = false;
-	VR_Gun->CastShadow = false;
-	VR_Gun->SetupAttachment(R_MotionController);
-	VR_Gun->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	//VR_Gun = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("VR_Gun"));
+	//VR_Gun->SetOnlyOwnerSee(false);			// otherwise won't be visible in the multiplayer
+	//VR_Gun->bCastDynamicShadow = false;
+	//VR_Gun->CastShadow = false;
+	//VR_Gun->SetupAttachment(R_MotionController);
+	//VR_Gun->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 
-	VR_MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("VR_MuzzleLocation"));
-	VR_MuzzleLocation->SetupAttachment(VR_Gun);
-	VR_MuzzleLocation->SetRelativeLocation(FVector(0.000004, 53.999992, 10.000000));
-	VR_MuzzleLocation->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));		// Counteract the rotation of the VR gun model.
+	//VR_MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("VR_MuzzleLocation"));
+	//VR_MuzzleLocation->SetupAttachment(VR_Gun);
+	//VR_MuzzleLocation->SetRelativeLocation(FVector(0.000004, 53.999992, 10.000000));
+	//VR_MuzzleLocation->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));		// Counteract the rotation of the VR gun model.
 
 	// Uncomment the following line to turn motion controllers on by default:
 	//bUsingMotionControllers = true;
@@ -93,16 +95,16 @@ void APassball_v2Character::BeginPlay()
 	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
 
 	// Show or hide the two versions of the gun based on whether or not we're using motion controllers.
-	if (bUsingMotionControllers)
-	{
-		VR_Gun->SetHiddenInGame(false, true);
-		Mesh1P->SetHiddenInGame(true, true);
-	}
-	else
-	{
-		VR_Gun->SetHiddenInGame(true, true);
+	//if (bUsingMotionControllers)
+	//{
+	//	VR_Gun->SetHiddenInGame(false, true);
+	//	Mesh1P->SetHiddenInGame(true, true);
+	//}
+	//else
+	//{
+		//VR_Gun->SetHiddenInGame(true, true);
 		Mesh1P->SetHiddenInGame(false, true);
-	}
+	//}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -121,9 +123,9 @@ void APassball_v2Character::SetupPlayerInputComponent(class UInputComponent* Pla
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &APassball_v2Character::OnFire);
 
 	// Enable touchscreen input
-	EnableTouchscreenMovement(PlayerInputComponent);
+	//EnableTouchscreenMovement(PlayerInputComponent);
 
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &APassball_v2Character::OnResetVR);
+	//PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &APassball_v2Character::OnResetVR);
 
 	// Bind movement events
 	PlayerInputComponent->BindAxis("MoveForward", this, &APassball_v2Character::MoveForward);
@@ -146,14 +148,14 @@ void APassball_v2Character::OnFire()
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
-			if (bUsingMotionControllers)
-			{
-				const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
-				const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
-				World->SpawnActor<APassball_v2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation);
-			}
-			else
-			{
+			//if (bUsingMotionControllers)
+			//{
+			//	const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
+			//	const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
+			//	World->SpawnActor<APassball_v2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation);
+			//}
+			//else
+			//{
 				const FRotator SpawnRotation = GetControlRotation();
 				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
 				const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
@@ -164,7 +166,7 @@ void APassball_v2Character::OnFire()
 
 				// spawn the projectile at the muzzle
 				World->SpawnActor<APassball_v2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-			}
+			//}
 		}
 	}
 
@@ -282,6 +284,11 @@ void APassball_v2Character::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+UMyCharacterMovementComponent* APassball_v2Character::GetMyMovementComponent() const
+{
+	return static_cast<UMyCharacterMovementComponent*>(GetCharacterMovement());
 }
 
 //bool APassball_v2Character::EnableTouchscreenMovement(class UInputComponent* PlayerInputComponent)

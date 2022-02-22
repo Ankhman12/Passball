@@ -11,7 +11,7 @@
  *
  */
 UCLASS(BlueprintType)
-class CHARACTERNETWORKING_API UMyCharacterMovementComponent : public UCharacterMovementComponent
+class UMyCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
 

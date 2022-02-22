@@ -3,7 +3,7 @@
 
 #include "MyCharacterMovementComponent.h"
 #include "GameFramework/Character.h"
-#include "ECustomMovementMode.h"
+#include "EParkourMovementMode.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
@@ -31,7 +31,7 @@ bool UMyCharacterMovementComponent::BeginWallRun()
 	if (WallRunKeysDown == true)
 	{
 		// Set the movement mode to wall running. UE4 will handle replicating this change to all connected clients.
-		SetMovementMode(EMovementMode::MOVE_Custom, ECustomMovementMode::CMOVE_WallRunning);
+		SetMovementMode(EMovementMode::MOVE_Custom, EParkourMovementMode::CMOVE_WallRunning);
 		return true;
 	}
 
@@ -149,7 +149,7 @@ bool UMyCharacterMovementComponent::IsCustomMovementMode(uint8 custom_movement_m
 
 void UMyCharacterMovementComponent::OnActorHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (IsCustomMovementMode(ECustomMovementMode::CMOVE_WallRunning))
+	if (IsCustomMovementMode(EParkourMovementMode::CMOVE_WallRunning))
 		return;
 
 	// Make sure we're falling. Wall running can only begin if we're currently in the air
@@ -245,7 +245,7 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 		switch (CustomMovementMode)
 		{
 			// Did we just start wall running?
-		case ECustomMovementMode::CMOVE_WallRunning:
+		case EParkourMovementMode::CMOVE_WallRunning:
 		{
 			// Stop current movement and constrain the character to only horizontal movement
 			StopMovementImmediately();
@@ -261,7 +261,7 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 		switch (PreviousCustomMode)
 		{
 			// Did we just finish wall running?
-		case ECustomMovementMode::CMOVE_WallRunning:
+		case EParkourMovementMode::CMOVE_WallRunning:
 		{
 			// Unconstrain the character from horizontal movement
 			bConstrainToPlane = false;
@@ -282,7 +282,7 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 
 	switch (CustomMovementMode)
 	{
-	case ECustomMovementMode::CMOVE_WallRunning:
+	case EParkourMovementMode::CMOVE_WallRunning:
 	{
 		PhysWallRunning(deltaTime, Iterations);
 		break;
@@ -382,7 +382,7 @@ void UMyCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float r
 	Super::ProcessLanded(Hit, remainingTime, Iterations);
 
 	// If we landed while wall running, make sure we stop wall running
-	if (IsCustomMovementMode(ECustomMovementMode::CMOVE_WallRunning))
+	if (IsCustomMovementMode(EParkourMovementMode::CMOVE_WallRunning))
 	{
 		EndWallRun();
 	}

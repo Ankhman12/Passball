@@ -13,6 +13,7 @@ class UCameraComponent;
 class UMotionControllerComponent;
 class UAnimMontage;
 class USoundBase;
+class UMyCharacterMovementComponent;
 
 UCLASS(config=Game)
 class APassball_v2Character : public ACharacter
@@ -52,7 +53,8 @@ class APassball_v2Character : public ACharacter
 	//UMotionControllerComponent* L_MotionController;
 
 public:
-	APassball_v2Character();
+	// Sets default values for this character's properties
+	APassball_v2Character(const class FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void BeginPlay();
@@ -143,6 +145,10 @@ public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	// Gets the character's MyCustomMovementComponent
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+		UMyCharacterMovementComponent* GetMyMovementComponent() const;
 
 };
 
