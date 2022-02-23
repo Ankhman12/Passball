@@ -37,6 +37,10 @@ private:
 	// The player's velocity while wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float WallRunSpeed = 625.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		float DefaultGravity = 10.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		float WallRunGravity = 2.5f;
 #pragma endregion
 
 #pragma region Sprinting Functions
@@ -63,6 +67,14 @@ public:
 	bool CanSurfaceBeWallRan(const FVector& surface_normal) const;
 	// Returns true if the movement mode is custom and matches the provided custom movement mode
 	bool IsCustomMovementMode(uint8 custom_movement_mode) const;
+	// Returns vector used to stick player to the wall
+	FVector GetPlayerToWallVector();
+	// Returns vector used to push player forward along the wall
+	FVector GetWallRunForwardVector();
+	// Function for suppressing ability to wall run for a short time 
+	void SuppressWallRun(float delay);
+	// Function for ending wall run suppression
+	void EndWallRunSuppression();
 private:
 	// Called when the owning actor hits something (to begin the wall run)
 	UFUNCTION()
@@ -98,6 +110,10 @@ private:
 	FVector WallRunDirection;
 	// The side of the wall the player is running on.
 	EWallRunSide WallRunSide;
+	// Normal vector of the wall the player is running on
+	FVector WallNormal;
+	// Boolean for tracking whether or not the player's ability to wall run is suppressed
+	bool isWallRunSuppressed;
 #pragma endregion
 };
 

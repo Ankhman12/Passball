@@ -167,6 +167,8 @@ void UMyCharacterMovementComponent::OnActorHit(AActor* SelfActor, AActor* OtherA
 	if (IsNextToWall() == false)
 		return;
 
+	WallNormal = Hit.ImpactNormal;
+
 	BeginWallRun();
 }
 
@@ -217,6 +219,8 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 
 		// Update if the required wall run key(s) are being pressed
 		WallRunKeysDown = AreRequiredWallRunKeysDown();
+
+		//Do Camera Stuff?
 	}
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -247,10 +251,10 @@ void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 			// Did we just start wall running?
 		case EParkourMovementMode::CMOVE_WallRunning:
 		{
-			// Stop current movement and constrain the character to only horizontal movement
-			StopMovementImmediately();
-			bConstrainToPlane = true;
-			SetPlaneConstraintNormal(FVector(0.0f, 0.0f, 1.0f));
+			//[DEPRECATED] Stop current movement and constrain the character to only horizontal movement
+			//StopMovementImmediately();
+			//bConstrainToPlane = true;
+			//SetPlaneConstraintNormal(FVector(0.0f, 0.0f, 1.0f));
 		}
 		break;
 		}
@@ -293,6 +297,26 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 	Super::PhysCustom(deltaTime, Iterations);
 }
 
+FVector UMyCharacterMovementComponent::GetPlayerToWallVector() {
+	//Use Wall normal to get player to wall vector
+	FVector* vec = new FVector(0.0f,0.0f,0.0f);
+	return *vec;
+}
+
+FVector UMyCharacterMovementComponent::GetWallRunForwardVector() {
+	//Get vector to push player forwards along the wall
+	FVector* vec = new FVector(0.0f, 0.0f, 0.0f);
+	return *vec;
+}
+
+void UMyCharacterMovementComponent::SuppressWallRun(float delay) {
+	//Suppress ability to wall run
+}
+
+void UMyCharacterMovementComponent::EndWallRunSuppression() {
+	//End the suppression of wall running
+}
+
 void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
 {
 	// IMPORTANT NOTE: This function (and all other Phys* functions) will be called on characters with ROLE_Authority and ROLE_AutonomousProxy
@@ -315,16 +339,22 @@ void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Itera
 		return;
 	}
 
-	// Set the owning player's new velocity based on the wall run direction
-	FVector newVelocity = WallRunDirection;
-	newVelocity.X *= WallRunSpeed;
-	newVelocity.Y *= WallRunSpeed;
-	newVelocity.Z *= 0.0f;
-	Velocity = newVelocity;
+	//Stick Character to Wall
+	/* GetCharacterOwner()->LaunchCharacter(); */
+	//Push Character forward along wall
+	/* GetCharacterOwner()->LaunchCharacter(); */
+	//Drop the gravity
+	/* FMath::FInterpTo(...); */
 
-	const FVector Adjusted = Velocity * deltaTime;
-	FHitResult Hit(1.f);
-	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
+	//[DEPRECATED] Set the owning player's new velocity based on the wall run direction
+	//FVector newVelocity = WallRunDirection;
+	//newVelocity.X *= WallRunSpeed;
+	//newVelocity.Y *= WallRunSpeed;
+	//newVelocity.Z *= 0.0f;
+	//Velocity = newVelocity;
+	//const FVector Adjusted = Velocity * deltaTime;
+	//FHitResult Hit(1.f);
+	//SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
 }
 
 float UMyCharacterMovementComponent::GetMaxSpeed() const
