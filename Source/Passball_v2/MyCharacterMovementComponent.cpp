@@ -40,6 +40,8 @@ bool UMyCharacterMovementComponent::BeginWallRun()
 
 void UMyCharacterMovementComponent::EndWallRun()
 {
+	//Reset gravity
+	GravityScale = DefaultGravity;
 	// Set the movement mode back to falling
 	SetMovementMode(EMovementMode::MOVE_Falling);
 }
@@ -297,24 +299,33 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 	Super::PhysCustom(deltaTime, Iterations);
 }
 
-FVector UMyCharacterMovementComponent::GetPlayerToWallVector() {
+FVector UMyCharacterMovementComponent::GetPlayerToWallVector() const {
 	//Use Wall normal to get player to wall vector
-	FVector* vec = new FVector(0.0f,0.0f,0.0f);
-	return *vec;
+	FVector vec = GetActorLocation() - WallNormal;
+	vec = vec.Size() * WallNormal;
+	return vec;
 }
 
-FVector UMyCharacterMovementComponent::GetWallRunForwardVector() {
+FVector UMyCharacterMovementComponent::GetWallRunForwardVector() const {
 	//Get vector to push player forwards along the wall
-	FVector* vec = new FVector(0.0f, 0.0f, 0.0f);
-	return *vec;
+	FVector* up = new FVector(0, 0, 1);
+	FVector forwardVec = WallNormal.CrossProduct(WallNormal, *up);
+	FVector vec = forwardVec * WallRunSpeed * WallRunDirection;
+	return vec;
 }
 
-void UMyCharacterMovementComponent::SuppressWallRun(float delay) {
+void UMyCharacterMovementComponent::SuppressWallRun(float delay)
+{
 	//Suppress ability to wall run
+	IsWallRunSuppressed = true;
+	//	GetWorld()->GetTimerManager().SetTimer(WallRunTimerHandle, this, &UMyCharacterMovementComponent::ResetWallRunSuppression, delay, false);
 }
 
-void UMyCharacterMovementComponent::EndWallRunSuppression() {
+void UMyCharacterMovementComponent::ResetWallRunSuppression()
+{
 	//End the suppression of wall running
+	//	GetWorld()->GetTimerManager().ClearTimer(WallRunTimerHandle);
+	IsWallRunSuppressed = false;
 }
 
 void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
@@ -339,12 +350,12 @@ void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Itera
 		return;
 	}
 
-	//Stick Character to Wall
-	/* GetCharacterOwner()->LaunchCharacter(); */
-	//Push Character forward along wall
-	/* GetCharacterOwner()->LaunchCharacter(); */
-	//Drop the gravity
-	/* FMath::FInterpTo(...); */
+	///Stick Player to wall
+	CharacterOwner->LaunchCharacter(GetPlayerToWallVector(), false, false);
+	//Push Player forwards along the wall
+	CharacterOwner->LaunchCharacter(GetWallRunForwardVector(), false, !UseWallRunGravity);
+	// Drop the gravity
+	GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, deltaTime, 10.0f);
 
 	//[DEPRECATED] Set the owning player's new velocity based on the wall run direction
 	//FVector newVelocity = WallRunDirection;

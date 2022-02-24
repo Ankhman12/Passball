@@ -37,12 +37,17 @@ private:
 	// The player's velocity while wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float WallRunSpeed = 625.0f;
+	//Default gravity to reset after wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
-		float DefaultGravity = 10.0f;
+		float DefaultGravity = 1.0f;
+	//Gravity value to use while wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
-		float WallRunGravity = 2.5f;
+		float WallRunTargetGravity = 0.2f;
+	//Boolean to determine if wall run uses gravity
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		 bool UseWallRunGravity = false;
 #pragma endregion
-
+	
 #pragma region Sprinting Functions
 public:
 	// Sets sprinting to either enabled or disabled
@@ -57,6 +62,12 @@ public:
 	// Ends the character's wall run
 	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
 		void EndWallRun();
+	//Stops the character from being able to wall run for a given delay
+	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
+		void SuppressWallRun(float delay);
+	//Resets wall run suppression to unsuppressed 
+	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
+		void ResetWallRunSuppression();
 	// Returns true if the required wall run keys are currently down
 	bool AreRequiredWallRunKeysDown() const;
 	// Returns true if the player is next to a wall that can be wall ran
@@ -68,13 +79,9 @@ public:
 	// Returns true if the movement mode is custom and matches the provided custom movement mode
 	bool IsCustomMovementMode(uint8 custom_movement_mode) const;
 	// Returns vector used to stick player to the wall
-	FVector GetPlayerToWallVector();
+	FVector GetPlayerToWallVector() const;
 	// Returns vector used to push player forward along the wall
-	FVector GetWallRunForwardVector();
-	// Function for suppressing ability to wall run for a short time 
-	void SuppressWallRun(float delay);
-	// Function for ending wall run suppression
-	void EndWallRunSuppression();
+	FVector GetWallRunForwardVector() const;
 private:
 	// Called when the owning actor hits something (to begin the wall run)
 	UFUNCTION()
@@ -113,7 +120,7 @@ private:
 	// Normal vector of the wall the player is running on
 	FVector WallNormal;
 	// Boolean for tracking whether or not the player's ability to wall run is suppressed
-	bool isWallRunSuppressed;
+	bool IsWallRunSuppressed = false;
 #pragma endregion
 };
 
