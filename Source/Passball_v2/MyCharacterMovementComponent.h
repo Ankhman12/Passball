@@ -82,6 +82,15 @@ public:
 	FVector GetPlayerToWallVector() const;
 	// Returns vector used to push player forward along the wall
 	FVector GetWallRunForwardVector() const;
+	// Returns the distance vector used by line trace to check if player is on a wall (left side)
+	FVector GetLeftWallEndVector() const;
+	// Returns the distance vector used by line trace to check if player is on a wall (right side)
+	FVector GetRightWallEndVector() const;
+
+	//Main wall run update function
+	void WallRunUpdate();
+	//Function for calculting movement along wall run
+	bool WallRunMovement(FVector start, FVector end, float direction);
 private:
 	// Called when the owning actor hits something (to begin the wall run)
 	UFUNCTION()

@@ -69,9 +69,9 @@ bool UMyCharacterMovementComponent::AreRequiredWallRunKeysDown() const
 bool UMyCharacterMovementComponent::IsNextToWall(float vertical_tolerance)
 {
 	// Do a line trace from the player into the wall to make sure we're stil along the side of a wall
-	FVector crossVector = WallRunSide == EWallRunSide::kLeft ? FVector(0.0f, 0.0f, -1.0f) : FVector(0.0f, 0.0f, 1.0f);
-	FVector traceStart = GetPawnOwner()->GetActorLocation() + (WallRunDirection * 20.0f);
-	FVector traceEnd = traceStart + (FVector::CrossProduct(WallRunDirection, crossVector) * 100);
+	//FVector crossVector = WallRunSide == EWallRunSide::kLeft ? FVector(0.0f, 0.0f, -1.0f) : FVector(0.0f, 0.0f, 1.0f);
+	FVector traceStart = GetPawnOwner()->GetActorLocation(); //+ (WallRunDirection * 20.0f);
+	FVector traceEnd = WallRunSide == EWallRunSide::kLeft ? GetLeftWallEndVector() : GetRightWallEndVector();
 	FHitResult hitResult;
 
 	// Create a helper lambda for performing the line trace
@@ -299,9 +299,19 @@ void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations
 	Super::PhysCustom(deltaTime, Iterations);
 }
 
+FVector UMyCharacterMovementComponent::GetLeftWallEndVector() const {
+	FVector vec = (CharacterOwner->GetActorRightVector() * -75.0f) + (CharacterOwner->GetActorForwardVector() * -35.0f) + CharacterOwner->GetActorLocation();
+	return vec;
+}
+
+FVector UMyCharacterMovementComponent::GetRightWallEndVector() const {
+	FVector vec = (CharacterOwner->GetActorRightVector() * 75.0f) + (CharacterOwner->GetActorForwardVector() * -35.0f) + CharacterOwner->GetActorLocation();
+	return vec;
+}
+
 FVector UMyCharacterMovementComponent::GetPlayerToWallVector() const {
 	//Use Wall normal to get player to wall vector
-	FVector vec = GetActorLocation() - WallNormal;
+	FVector vec = CharacterOwner->GetActorLocation() - WallNormal;
 	vec = vec.Size() * WallNormal;
 	return vec;
 }
@@ -309,7 +319,7 @@ FVector UMyCharacterMovementComponent::GetPlayerToWallVector() const {
 FVector UMyCharacterMovementComponent::GetWallRunForwardVector() const {
 	//Get vector to push player forwards along the wall
 	FVector* up = new FVector(0, 0, 1);
-	FVector forwardVec = WallNormal.CrossProduct(WallNormal, *up);
+	FVector forwardVec = FVector::CrossProduct(WallNormal, *up);
 	FVector vec = forwardVec * WallRunSpeed * WallRunDirection;
 	return vec;
 }
@@ -326,6 +336,16 @@ void UMyCharacterMovementComponent::ResetWallRunSuppression()
 	//End the suppression of wall running
 	//	GetWorld()->GetTimerManager().ClearTimer(WallRunTimerHandle);
 	IsWallRunSuppressed = false;
+}
+
+void UMyCharacterMovementComponent::WallRunUpdate() 
+{
+	//...
+}
+
+bool UMyCharacterMovementComponent::WallRunMovement(FVector start, FVector end, float wallRunDirection) {
+	//...
+	//GetWorld()->LineTraceSingleByChannel
 }
 
 void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
@@ -353,7 +373,7 @@ void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Itera
 	///Stick Player to wall
 	CharacterOwner->LaunchCharacter(GetPlayerToWallVector(), false, false);
 	//Push Player forwards along the wall
-	CharacterOwner->LaunchCharacter(GetWallRunForwardVector(), false, !UseWallRunGravity);
+	CharacterOwner->LaunchCharacter(GetWallRunForwardVector(), true, !UseWallRunGravity);
 	// Drop the gravity
 	GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, deltaTime, 10.0f);
 
