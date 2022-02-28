@@ -6,6 +6,8 @@
 UENUM(BlueprintType)
 enum EParkourMovementMode
 {
-	CMOVE_WallRunning   UMETA(DisplayName = "WallRunning"),
-	CMOVE_MAX			UMETA(Hidden),
+	MOVE_WallRunLeft   UMETA(DisplayName = "WallRunLeft"),
+	MOVE_WallRunRight  UMETA(DisplayName = "WallRunRight"),
+	MOVE_Sprint		   UMETA(DisplayName = "Sprint"),
+	MOVE_NoParkour	   UMETA(DisplayName = "NoParkour")
 };

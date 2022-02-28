@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "EWallRunSide.h"
+#include "EParkourMovementMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MyCharacterMovementComponent.generated.h"
+
 
 /**
  *
@@ -36,7 +38,7 @@ private:
 		float LineTraceVerticalTolerance = 50.0f;
 	// The player's velocity while wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
-		float WallRunSpeed = 625.0f;
+		float WallRunSpeed = 850.0f;
 	//Default gravity to reset after wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float DefaultGravity = 1.0f;
@@ -47,7 +49,14 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		 bool UseWallRunGravity = false;
 #pragma endregion
-	
+
+#pragma region Parkour General Functions
+	void ParkourUpdate();
+	void ResetMovement();
+	void OnParkourModeChanged(EParkourMovementMode PreviousParkourMode, EParkourMovementMode NewParkourMode);
+	bool SetParkourMovementMode(EParkourMovementMode ModeToSet);
+#pragma endregion
+
 #pragma region Sprinting Functions
 public:
 	// Sets sprinting to either enabled or disabled
@@ -58,55 +67,55 @@ public:
 #pragma region Wall Running Functions
 	// Requests that the character begins wall running. Will return false if the required keys are not being pressed
 	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		bool BeginWallRun();
+		void BeginWallRun(float wallRunDirection);
 	// Ends the character's wall run
 	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		void EndWallRun();
-	//Stops the character from being able to wall run for a given delay
-	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		void SuppressWallRun(float delay);
-	//Resets wall run suppression to unsuppressed 
-	//UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		void ResetWallRunSuppression();
+		void EndWallRun(float resetTime);
 	// Returns true if the required wall run keys are currently down
-	bool AreRequiredWallRunKeysDown() const;
+	//bool AreRequiredWallRunKeysDown() const;
 	// Returns true if the player is next to a wall that can be wall ran
-	bool IsNextToWall(float vertical_tolerance = 0.0f);
+	//bool IsNextToWall(float vertical_tolerance = 0.0f);
 	// Finds the wall run direction and side based on the specified surface normal
-	void FindWallRunDirectionAndSide(const FVector& surface_normal, FVector& direction, EWallRunSide& side) const;
+	//void FindWallRunDirectionAndSide(const FVector& surface_normal, FVector& direction, EWallRunSide& side) const;
 	// Helper function that returns true if the specified surface normal can be wall ran on
-	bool CanSurfaceBeWallRan(const FVector& surface_normal) const;
+	//bool CanSurfaceBeWallRan(const FVector& surface_normal) const;
 	// Returns true if the movement mode is custom and matches the provided custom movement mode
 	bool IsCustomMovementMode(uint8 custom_movement_mode) const;
-	// Returns vector used to stick player to the wall
-	FVector GetPlayerToWallVector() const;
+	// Returns true if the player is wall running
+	bool IsWallRunning() const;
 	// Returns vector used to push player forward along the wall
-	FVector GetWallRunForwardVector() const;
+	FVector GetWallRunForwardVector(float wallRunDirection) const;
 	// Returns the distance vector used by line trace to check if player is on a wall (left side)
 	FVector GetLeftWallEndVector() const;
 	// Returns the distance vector used by line trace to check if player is on a wall (right side)
 	FVector GetRightWallEndVector() const;
+	// Returns bool of whether or not the wall is wall runnable given the wall normal
+	bool ValidWallRunVector(FVector wallNormal) const;
 
 	//Main wall run update function
 	void WallRunUpdate();
 	//Function for calculting movement along wall run
 	bool WallRunMovement(FVector start, FVector end, float direction);
+	
+	//Wall Run Gate functions
+	void OpenWallRunGate();
+	void CloseWallRunGate();
 private:
 	// Called when the owning actor hits something (to begin the wall run)
-	UFUNCTION()
-		void OnActorHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
+	//UFUNCTION()
+	//	void OnActorHit(AActor* SelfActor, AActor* OtherActor, FVector NormalImpulse, const FHitResult& Hit);
 #pragma endregion
 
 #pragma region Overrides
 protected:
 	virtual void BeginPlay() override;
-	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
+	//virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 public:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
-	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
-	void PhysWallRunning(float deltaTime, int32 Iterations);
+	//virtual void PhysCustom(float deltaTime, int32 Iterations) override;
+	//void PhysWallRunning(float deltaTime, int32 Iterations);
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
 	virtual void ProcessLanded(const FHitResult& Hit, float remainingTime, int32 Iterations) override;
@@ -116,20 +125,28 @@ public:
 #pragma region Compressed Flags
 private:
 	uint8 WantsToSprint : 1;
-	uint8 WallRunKeysDown : 1;
+	//uint8 WallRunKeysDown : 1;
 #pragma endregion
 
 #pragma region Private Variables
 	// True if the sprint key is down
 	bool SprintKeyDown = false;
-	// The direction the character is currently wall running in
-	FVector WallRunDirection;
-	// The side of the wall the player is running on.
-	EWallRunSide WallRunSide;
 	// Normal vector of the wall the player is running on
 	FVector WallNormal;
-	// Boolean for tracking whether or not the player's ability to wall run is suppressed
-	bool IsWallRunSuppressed = false;
+
+	//General update timer handler
+	FTimerHandle ParkourHandle;
+
+	//Wall Run Gate variables
+	bool IsWallRunGateOpen = true;
+	FTimerHandle WallRunGateHandle;
+
+	//Movement mode variables
+	EMovementMode PrevMovementMode;
+	EMovementMode CurrMovementMode;
+	EParkourMovementMode PrevParkourMode = EParkourMovementMode::MOVE_NoParkour;
+	EParkourMovementMode CurrParkourMode = EParkourMovementMode::MOVE_NoParkour;
+
 #pragma endregion
 };
 
@@ -153,7 +170,7 @@ public:
 
 private:
 	uint8 SavedWantsToSprint : 1;
-	uint8 SavedWallRunKeysDown : 1;
+	//uint8 SavedWallRunKeysDown : 1;
 };
 
 class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character
