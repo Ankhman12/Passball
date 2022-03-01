@@ -26,19 +26,19 @@ void UMyCharacterMovementComponent::SetSprinting(bool sprinting)
 	SprintKeyDown = sprinting;
 }
 
-void UMyCharacterMovementComponent::BeginWallRun(float wallRunDirection)
-{
+//void UMyCharacterMovementComponent::BeginWallRun(float wallRunDirection)
+//{
 	// Set the movement mode to wall running. UE4 will handle replicating this change to all connected clients.
-	if (wallRunDirection < 0.0f)
-	{
-		SetMovementMode(EMovementMode::MOVE_Custom, EParkourMovementMode::MOVE_WallRunLeft);
-	}
-	else if (wallRunDirection > 0.0f)
-	{
-		SetMovementMode(EMovementMode::MOVE_Custom, EParkourMovementMode::MOVE_WallRunRight);
-	}
-	
-}
+//	if (wallRunDirection < 0.0f)
+//	{
+//		SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunLeft);
+//	}
+//	else if (wallRunDirection > 0.0f)
+//	{
+//		SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunRight);
+//	}
+//	
+//}
 
 void UMyCharacterMovementComponent::EndWallRun(float resetTime)
 {
@@ -207,6 +207,28 @@ void UMyCharacterMovementComponent::BeginPlay()
 //	Super::OnComponentDestroyed(bDestroyingHierarchy);
 //}
 
+void UMyCharacterMovementComponent::CameraTick(float deltaTime)
+{
+	switch (CurrParkourMode)
+	{
+	case EParkourMovementMode::MOVE_WallRunRight:
+		CameraTilt(-15.0f, deltaTime);
+		break;
+	case EParkourMovementMode::MOVE_WallRunLeft:
+		CameraTilt(15.0f, deltaTime);
+		break;
+	default:
+		CameraTilt(0.0f, deltaTime);
+	}
+}
+
+void UMyCharacterMovementComponent::CameraTilt(float xRoll, float deltaTime)
+{
+	FRotator controlRot = CharacterOwner->GetController()->GetControlRotation();
+	FRotator newRot = FRotator(controlRot.Pitch, controlRot.Yaw, xRoll);
+	CharacterOwner->GetController()->SetControlRotation(FMath::RInterpTo(controlRot, newRot, deltaTime, 10.0f));
+}
+
 void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	// Peform local only checks
@@ -232,7 +254,8 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 		// Update if the required wall run key(s) are being pressed
 		//WallRunKeysDown = AreRequiredWallRunKeysDown();
 
-		//Do Camera Stuff?
+		//Do Camera Stuff
+		CameraTick(DeltaTime);
 	}
 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -279,6 +302,11 @@ bool UMyCharacterMovementComponent::SetParkourMovementMode(EParkourMovementMode 
 	return true;
 }
 
+float UMyCharacterMovementComponent::ForwardInput() const
+{
+	return FVector::DotProduct(CharacterOwner->GetActorForwardVector(), GetLastInputVector());
+}
+
 //void UMyCharacterMovementComponent::PhysCustom(float deltaTime, int32 Iterations)
 //{	
 	// Phys* functions should only run for characters with ROLE_Authority or ROLE_AutonomousProxy. However, Unreal calls PhysCustom in
@@ -304,6 +332,13 @@ bool UMyCharacterMovementComponent::SetParkourMovementMode(EParkourMovementMode 
 
 bool UMyCharacterMovementComponent::IsWallRunning() const {
 	return CurrParkourMode == EParkourMovementMode::MOVE_WallRunLeft || CurrParkourMode == EParkourMovementMode::MOVE_WallRunRight;
+}
+
+bool UMyCharacterMovementComponent::CanWallRun() const {
+	if (ForwardInput() > 0.0f && (CurrParkourMode == EParkourMovementMode::MOVE_NoParkour || IsWallRunning())) {
+		return true;
+	}
+	return false;
 }
 
 FVector UMyCharacterMovementComponent::GetLeftWallEndVector() const {
@@ -338,7 +373,21 @@ bool UMyCharacterMovementComponent::ValidWallRunVector(FVector wallNormal) const
 
 void UMyCharacterMovementComponent::WallRunUpdate() 
 {
-	if (IsWallRunning())
+	if (GEngine) {
+		switch (CurrParkourMode)
+		{
+		case EParkourMovementMode::MOVE_NoParkour:
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("no parkour"));
+			break;
+		case EParkourMovementMode::MOVE_WallRunLeft:
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run left"));
+			break;
+		case EParkourMovementMode::MOVE_WallRunRight:
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run right"));
+			break;
+		}
+	}
+	if (CanWallRun())
 	{
 		//Right side
 		if (WallRunMovement(CharacterOwner->GetActorLocation(), GetRightWallEndVector(), -1.0f))
@@ -370,20 +419,27 @@ bool UMyCharacterMovementComponent::WallRunMovement(FVector start, FVector end, 
 	GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_Visibility);
 	if (hit.bBlockingHit && ValidWallRunVector(hit.Normal) && MovementMode == EMovementMode::MOVE_Falling)
 	{
-		BeginWallRun(wallRunDirection);
-		onWall = true;
-	}
-
-	if (IsWallRunning())
-	{
 		//save wall normal
 		WallNormal = hit.Normal;
 		//Push Player forwards along the wall
 		CharacterOwner->LaunchCharacter(GetWallRunForwardVector(wallRunDirection), true, !UseWallRunGravity);
-
-		//onWall = true;
+		//Set to true, we are on the wall
+		onWall = true;
 	}
+
 	return onWall;
+}
+
+void UMyCharacterMovementComponent::WallRunJump()
+{
+	if (IsWallRunning())
+	{
+		EndWallRun(0.35f);
+		float offX = WallRunJumpOutForce * WallNormal.X;
+		float offY = WallRunJumpOutForce * WallNormal.Y;
+		FVector launchVelocity = FVector(0.0f, 0.0f, WallRunJumpHeight);
+		CharacterOwner->LaunchCharacter(launchVelocity, false, true);
+	}
 }
 
 void UMyCharacterMovementComponent::ParkourUpdate()
@@ -416,7 +472,7 @@ void UMyCharacterMovementComponent::ResetMovement()
 	}
 }
 
-//#pragma region Gate Functions
+//Gate Functions
 
 void UMyCharacterMovementComponent::OpenWallRunGate()
 {
@@ -427,8 +483,6 @@ void UMyCharacterMovementComponent::CloseWallRunGate()
 {
 	IsWallRunGateOpen = false;
 }
-
-//#pragma endregion
 
 //void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
 //{
@@ -459,7 +513,6 @@ void UMyCharacterMovementComponent::CloseWallRunGate()
 	//FHitResult Hit(1.f);
 	//SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
 
-//}
 
 float UMyCharacterMovementComponent::GetMaxSpeed() const
 {
@@ -518,7 +571,7 @@ void UMyCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float r
 	// If we landed while wall running, make sure we stop wall running
 	if (IsWallRunning())
 	{
-		EndWallRun(1.0f);
+		EndWallRun(0.0f);
 	}
 }
 

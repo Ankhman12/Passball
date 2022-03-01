@@ -48,13 +48,22 @@ private:
 	//Boolean to determine if wall run uses gravity
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		 bool UseWallRunGravity = false;
+	//Height to jump off of wall with
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		float WallRunJumpHeight = 400.0f;
+	//Outward force to jump off of wall with
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+		float WallRunJumpOutForce = 300.0f;
 #pragma endregion
 
 #pragma region Parkour General Functions
 	void ParkourUpdate();
+	void CameraTick(float deltaTime);
+	void CameraTilt(float xRoll, float deltaTime);
 	void ResetMovement();
 	void OnParkourModeChanged(EParkourMovementMode PreviousParkourMode, EParkourMovementMode NewParkourMode);
 	bool SetParkourMovementMode(EParkourMovementMode ModeToSet);
+	float ForwardInput() const;
 #pragma endregion
 
 #pragma region Sprinting Functions
@@ -66,11 +75,13 @@ public:
 
 #pragma region Wall Running Functions
 	// Requests that the character begins wall running. Will return false if the required keys are not being pressed
-	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
-		void BeginWallRun(float wallRunDirection);
+	//UFUNCTION(BlueprintCallable, Category = "My Character Movement")
+		//void BeginWallRun(float wallRunDirection);
+
 	// Ends the character's wall run
-	UFUNCTION(BlueprintCallable, Category = "Custom Character Movement")
+	UFUNCTION(BlueprintCallable, Category = "My Character Movement")
 		void EndWallRun(float resetTime);
+
 	// Returns true if the required wall run keys are currently down
 	//bool AreRequiredWallRunKeysDown() const;
 	// Returns true if the player is next to a wall that can be wall ran
@@ -79,6 +90,7 @@ public:
 	//void FindWallRunDirectionAndSide(const FVector& surface_normal, FVector& direction, EWallRunSide& side) const;
 	// Helper function that returns true if the specified surface normal can be wall ran on
 	//bool CanSurfaceBeWallRan(const FVector& surface_normal) const;
+
 	// Returns true if the movement mode is custom and matches the provided custom movement mode
 	bool IsCustomMovementMode(uint8 custom_movement_mode) const;
 	// Returns true if the player is wall running
@@ -91,8 +103,12 @@ public:
 	FVector GetRightWallEndVector() const;
 	// Returns bool of whether or not the wall is wall runnable given the wall normal
 	bool ValidWallRunVector(FVector wallNormal) const;
-
-	//Main wall run update function
+	//Returns bool of whether or not player can wall run
+	bool CanWallRun() const;
+	//Handles jumping while wall running 
+	UFUNCTION(BlueprintCallable, Category = "My Character Movement")
+		void WallRunJump();
+	//Main wall run body functions
 	void WallRunUpdate();
 	//Function for calculting movement along wall run
 	bool WallRunMovement(FVector start, FVector end, float direction);
