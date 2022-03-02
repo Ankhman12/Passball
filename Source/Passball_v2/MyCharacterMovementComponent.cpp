@@ -48,7 +48,7 @@ void UMyCharacterMovementComponent::EndWallRun(float resetTime)
 		if (changed)
 		{
 			CloseWallRunGate();
-			GetWorld()->GetTimerManager().SetTimer(WallRunGateHandle, this, &UMyCharacterMovementComponent::OpenWallRunGate, resetTime, true);
+			GetWorld()->GetTimerManager().SetTimer(WallRunGateHandle, this, &UMyCharacterMovementComponent::OpenWallRunGate, resetTime, false);
 		}
 
 	}
@@ -374,18 +374,19 @@ bool UMyCharacterMovementComponent::ValidWallRunVector(FVector wallNormal) const
 void UMyCharacterMovementComponent::WallRunUpdate() 
 {
 	if (GEngine) {
-		switch (CurrParkourMode)
-		{
-		case EParkourMovementMode::MOVE_NoParkour:
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("no parkour"));
-			break;
-		case EParkourMovementMode::MOVE_WallRunLeft:
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run left"));
-			break;
-		case EParkourMovementMode::MOVE_WallRunRight:
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run right"));
-			break;
-		}
+		//switch (CurrParkourMode)
+		//{
+		//case EParkourMovementMode::MOVE_NoParkour:
+		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("no parkour"));
+		//	break;
+		//case EParkourMovementMode::MOVE_WallRunLeft:
+		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run left"));
+		//	break;
+		//case EParkourMovementMode::MOVE_WallRunRight:
+		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run right"));
+		//	break;
+		//}
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
 	}
 	if (CanWallRun())
 	{
@@ -393,18 +394,19 @@ void UMyCharacterMovementComponent::WallRunUpdate()
 		if (WallRunMovement(CharacterOwner->GetActorLocation(), GetRightWallEndVector(), -1.0f))
 		{
 			SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunRight);
-
+			GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 		}
 		//Left side
 		else if (CurrParkourMode != EParkourMovementMode::MOVE_WallRunRight && WallRunMovement(CharacterOwner->GetActorLocation(), GetLeftWallEndVector(), 1.0f))
 		{
 			SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunLeft);
+			GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 		}
 		else {
 			EndWallRun(0.5f);
 		}
 
-		GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
+		//GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 	}
 	else 
 	{
@@ -437,7 +439,7 @@ void UMyCharacterMovementComponent::WallRunJump()
 		EndWallRun(0.35f);
 		float offX = WallRunJumpOutForce * WallNormal.X;
 		float offY = WallRunJumpOutForce * WallNormal.Y;
-		FVector launchVelocity = FVector(0.0f, 0.0f, WallRunJumpHeight);
+		FVector launchVelocity = FVector(offX, offY, WallRunJumpHeight);
 		CharacterOwner->LaunchCharacter(launchVelocity, false, true);
 	}
 }
@@ -477,11 +479,15 @@ void UMyCharacterMovementComponent::ResetMovement()
 void UMyCharacterMovementComponent::OpenWallRunGate()
 {
 	IsWallRunGateOpen = true;
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
 }
 
 void UMyCharacterMovementComponent::CloseWallRunGate()
 {
 	IsWallRunGateOpen = false;
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
 }
 
 //void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
