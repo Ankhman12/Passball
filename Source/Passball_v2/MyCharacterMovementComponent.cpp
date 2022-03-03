@@ -252,7 +252,7 @@ void UMyCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 		}
 
 		// Update if the required wall run key(s) are being pressed
-		//WallRunKeysDown = AreRequiredWallRunKeysDown();
+		WallRunKeysDown = ForwardInput() > 0.0f;
 
 		//Do Camera Stuff
 		CameraTick(DeltaTime);
@@ -274,7 +274,7 @@ void UMyCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 
 	// Read the values from the compressed flags
 	WantsToSprint = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
-	//WallRunKeysDown = (Flags & FSavedMove_Character::FLAG_Custom_1) != 0;
+	WallRunKeysDown = (Flags & FSavedMove_Character::FLAG_Custom_1) != 0;
 }
 
 void UMyCharacterMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -304,6 +304,9 @@ bool UMyCharacterMovementComponent::SetParkourMovementMode(EParkourMovementMode 
 
 float UMyCharacterMovementComponent::ForwardInput() const
 {
+	if (GetPawnOwner()->IsLocallyControlled() == false) {
+		return -1.0f;
+	}
 	return FVector::DotProduct(CharacterOwner->GetActorForwardVector(), GetLastInputVector());
 }
 
@@ -335,7 +338,7 @@ bool UMyCharacterMovementComponent::IsWallRunning() const {
 }
 
 bool UMyCharacterMovementComponent::CanWallRun() const {
-	if (ForwardInput() > 0.0f && (CurrParkourMode == EParkourMovementMode::MOVE_NoParkour || IsWallRunning())) {
+	if (WallRunKeysDown && (CurrParkourMode == EParkourMovementMode::MOVE_NoParkour || IsWallRunning())) {
 		return true;
 	}
 	return false;
@@ -373,21 +376,21 @@ bool UMyCharacterMovementComponent::ValidWallRunVector(FVector wallNormal) const
 
 void UMyCharacterMovementComponent::WallRunUpdate() 
 {
-	if (GEngine) {
-		//switch (CurrParkourMode)
-		//{
-		//case EParkourMovementMode::MOVE_NoParkour:
-		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("no parkour"));
-		//	break;
-		//case EParkourMovementMode::MOVE_WallRunLeft:
-		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run left"));
-		//	break;
-		//case EParkourMovementMode::MOVE_WallRunRight:
-		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("wall run right"));
-		//	break;
-		//}
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
-	}
+	//if (GEngine) {
+	//	switch (GetPawnOwner()->GetLocalRole())
+	//	{
+	//	case ROLE_Authority:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Checking 4 Wall :  Server"));
+	//		break;
+	//	case ROLE_AutonomousProxy:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Checking 4 Wall : Client"));
+	//		break;
+	//	default:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Something is wrong"));
+	//		break;
+	//	}
+		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
+	//}
 	if (CanWallRun())
 	{
 		//Right side
@@ -395,12 +398,42 @@ void UMyCharacterMovementComponent::WallRunUpdate()
 		{
 			SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunRight);
 			GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
+			if (GEngine) {
+				switch (GetPawnOwner()->GetLocalRole())
+				{
+				case ROLE_Authority:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Running : Server"));
+					break;
+				case ROLE_AutonomousProxy:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Running : Client"));
+					break;
+				default:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Something is wrong"));
+					break;
+				}
+				//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
+			}
 		}
 		//Left side
 		else if (CurrParkourMode != EParkourMovementMode::MOVE_WallRunRight && WallRunMovement(CharacterOwner->GetActorLocation(), GetLeftWallEndVector(), 1.0f))
 		{
 			SetParkourMovementMode(EParkourMovementMode::MOVE_WallRunLeft);
 			GravityScale = FMath::FInterpTo(GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
+			if (GEngine) {
+				switch (GetPawnOwner()->GetLocalRole())
+				{
+				case ROLE_Authority:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Running : Server"));
+					break;
+				case ROLE_AutonomousProxy:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Running : Client"));
+					break;
+				default:
+					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Something is wrong"));
+					break;
+				}
+				//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
+			}
 		}
 		else {
 			EndWallRun(0.5f);
@@ -415,7 +448,6 @@ void UMyCharacterMovementComponent::WallRunUpdate()
 }
 
 bool UMyCharacterMovementComponent::WallRunMovement(FVector start, FVector end, float wallRunDirection) {
-	//...
 	bool onWall = false;
 	FHitResult hit;
 	GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_Visibility);
@@ -428,14 +460,48 @@ bool UMyCharacterMovementComponent::WallRunMovement(FVector start, FVector end, 
 		//Set to true, we are on the wall
 		onWall = true;
 	}
-
+	//if (GEngine) {
+	//	switch (GetPawnOwner()->GetLocalRole())
+	//	{
+	//	case ROLE_Authority:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Movement : Server"));
+	//		break;
+	//	case ROLE_AutonomousProxy:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Movement : Client"));
+	//		break;
+	//	default:
+	//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Something is wrong"));
+	//		break;
+	//	}
+		//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
+	//}
 	return onWall;
 }
 
 void UMyCharacterMovementComponent::WallRunJump()
 {
+	if (GetPawnOwner()->GetLocalRole() == ROLE_SimulatedProxy) {
+		return;
+	}
+	
 	if (IsWallRunning())
 	{
+		if (GEngine) {
+			switch (GetPawnOwner()->GetLocalRole())
+			{
+			case ROLE_Authority:
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Jump : Server"));
+				break;
+			case ROLE_AutonomousProxy:
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Wall Jump : Client"));
+				break;
+			default:
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Something is wrong"));
+				break;
+			}
+			//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, FString::Printf(TEXT("%.2f"), GravityScale));
+		}
+
 		EndWallRun(0.35f);
 		float offX = WallRunJumpOutForce * WallNormal.X;
 		float offY = WallRunJumpOutForce * WallNormal.Y;
@@ -446,6 +512,10 @@ void UMyCharacterMovementComponent::WallRunJump()
 
 void UMyCharacterMovementComponent::ParkourUpdate()
 {
+	if (GetPawnOwner()->GetLocalRole() == ROLE_SimulatedProxy) {
+		return;
+	}
+
 	if (IsWallRunGateOpen) {
 		WallRunUpdate();
 	}
@@ -577,7 +647,7 @@ void UMyCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float r
 	// If we landed while wall running, make sure we stop wall running
 	if (IsWallRunning())
 	{
-		EndWallRun(0.0f);
+		EndWallRun(0.1f);
 	}
 }
 
@@ -587,7 +657,7 @@ void FSavedMove_My::Clear()
 
 	// Clear all values
 	SavedWantsToSprint = 0;
-	//SavedWallRunKeysDown = 0;
+	SavedWallRunKeysDown = 0;
 }
 
 uint8 FSavedMove_My::GetCompressedFlags() const
@@ -604,8 +674,8 @@ uint8 FSavedMove_My::GetCompressedFlags() const
 	// Write to the compressed flags 
 	if (SavedWantsToSprint)
 		Result |= FLAG_Custom_0;
-	//if (SavedWallRunKeysDown)
-	//	Result |= FLAG_Custom_1;
+	if (SavedWallRunKeysDown)
+		Result |= FLAG_Custom_1;
 
 	return Result;
 }
@@ -615,8 +685,8 @@ bool FSavedMove_My::CanCombineWith(const FSavedMovePtr& NewMovePtr, ACharacter* 
 	const FSavedMove_My* NewMove = static_cast<const FSavedMove_My*>(NewMovePtr.Get());
 
 	// As an optimization, check if the engine can combine saved moves.
-	if (SavedWantsToSprint != NewMove->SavedWantsToSprint) //||
-		//SavedWallRunKeysDown != NewMove->SavedWallRunKeysDown)
+	if (SavedWantsToSprint != NewMove->SavedWantsToSprint ||
+		SavedWallRunKeysDown != NewMove->SavedWallRunKeysDown)
 	{
 		return false;
 	}
@@ -633,7 +703,7 @@ void FSavedMove_My::SetMoveFor(ACharacter* Character, float InDeltaTime, FVector
 	{
 		// Copy values into the saved move
 		SavedWantsToSprint = charMov->WantsToSprint;
-		//SavedWallRunKeysDown = charMov->WallRunKeysDown;
+		SavedWallRunKeysDown = charMov->WallRunKeysDown;
 	}
 }
 
@@ -646,7 +716,7 @@ void FSavedMove_My::PrepMoveFor(class ACharacter* Character)
 	{
 		// Copt values out of the saved move
 		charMov->WantsToSprint = SavedWantsToSprint;
-		//charMov->WallRunKeysDown = SavedWallRunKeysDown;
+		charMov->WallRunKeysDown = SavedWallRunKeysDown;
 	}
 }
 

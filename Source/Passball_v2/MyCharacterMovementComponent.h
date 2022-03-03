@@ -141,7 +141,7 @@ public:
 #pragma region Compressed Flags
 private:
 	uint8 WantsToSprint : 1;
-	//uint8 WallRunKeysDown : 1;
+	uint8 WallRunKeysDown : 1;
 #pragma endregion
 
 #pragma region Private Variables
@@ -186,7 +186,7 @@ public:
 
 private:
 	uint8 SavedWantsToSprint : 1;
-	//uint8 SavedWallRunKeysDown : 1;
+	uint8 SavedWallRunKeysDown : 1;
 };
 
 class FNetworkPredictionData_Client_My : public FNetworkPredictionData_Client_Character
