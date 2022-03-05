@@ -20,9 +20,7 @@ class APassball_v2Character : public ACharacter
 {
 	GENERATED_BODY()
 
-	/** Pawn mesh: 1st person view (arms; seen only by self) */
-	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category=Mesh)
-	USkeletalMeshComponent* Mesh1P;
+	
 
 	/** Gun mesh: 1st person view (seen only by self) */
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
@@ -53,6 +51,11 @@ class APassball_v2Character : public ACharacter
 	//UMotionControllerComponent* L_MotionController;
 
 public:
+
+	/** Pawn mesh: 1st person view (arms; seen only by self) */
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Mesh)
+		USkeletalMeshComponent* Mesh1P;
+
 	// Sets default values for this character's properties
 	APassball_v2Character(const class FObjectInitializer& ObjectInitializer);
 
