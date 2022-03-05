@@ -22,22 +22,22 @@ class UMyCharacterMovementComponent : public UCharacterMovementComponent
 #pragma region Defaults
 private:
 	// The ground speed when running
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
 		float RunSpeed = 300.0f;
 	// The ground speed when sprinting
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
 		float SprintSpeed = 800.0f;
 	// The acceleration when running
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
 		float RunAcceleration = 2000.0f;
 	// The acceleration when sprinting
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Character Movement|Grounded", Meta = (AllowPrivateAccess = "true"))
 		float SprintAcceleration = 2000.0f;
 	// The amount of vertical room between the two line traces when checking if the character is still on the wall
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float LineTraceVerticalTolerance = 50.0f;
 	// The player's velocity while wall running
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float WallRunSpeed = 850.0f;
 	//Default gravity to reset after wall running
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
