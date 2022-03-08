@@ -64,6 +64,7 @@ private:
 	void OnParkourModeChanged(EParkourMovementMode PreviousParkourMode, EParkourMovementMode NewParkourMode);
 	bool SetParkourMovementMode(EParkourMovementMode ModeToSet);
 	float ForwardInput() const;
+	void PlayCameraShake();
 #pragma endregion
 
 #pragma region Sprinting Functions

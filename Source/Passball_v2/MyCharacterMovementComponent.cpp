@@ -544,6 +544,11 @@ void UMyCharacterMovementComponent::ResetMovement()
 	}
 }
 
+void UMyCharacterMovementComponent::PlayCameraShake()
+{
+	//CameraShake
+}
+
 //Gate Functions
 
 void UMyCharacterMovementComponent::OpenWallRunGate()
