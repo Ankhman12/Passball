@@ -54,6 +54,24 @@ private:
 	//Outward force to jump off of wall with
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Wall Running", Meta = (AllowPrivateAccess = "true"))
 		float WallRunJumpOutForce = 300.0f;
+
+	// The player's velocity while vertical wall running
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "My Character Movement|Climbing", Meta = (AllowPrivateAccess = "true"))
+		float VerticalWallRunSpeed = 300.0f;
+
+	//Maximum height for ledge to be mantle-able
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "My Character Movement|Mantling", Meta = (AllowPrivateAccess = "true"))
+		float MantleHeight = 40.0f;
+
+	//Camera Shakes
+	UPROPERTY(EditAnywhere, Category = "My Character Movement|Camera Shakes") //, Meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UCameraShakeBase> LandShake;
+	UPROPERTY(EditAnywhere, Category = "My Character Movement|Camera Shakes") //, Meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UCameraShakeBase> LedgeGrabShake;
+	UPROPERTY(EditAnywhere, Category = "My Character Movement|Camera Shakes") //, Meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UCameraShakeBase> QuickMantleShake;
+	UPROPERTY(EditAnywhere, Category = "My Character Movement|Camera Shakes") //, Meta = (AllowPrivateAccess = "true"))
+		TSubclassOf<UCameraShakeBase> MantleShake;
 #pragma endregion
 
 #pragma region Parkour General Functions
@@ -64,7 +82,7 @@ private:
 	void OnParkourModeChanged(EParkourMovementMode PreviousParkourMode, EParkourMovementMode NewParkourMode);
 	bool SetParkourMovementMode(EParkourMovementMode ModeToSet);
 	float ForwardInput() const;
-	void PlayCameraShake();
+	void PlayCameraShake(TSubclassOf<UCameraShakeBase> shake);
 #pragma endregion
 
 #pragma region Sprinting Functions
@@ -113,10 +131,28 @@ public:
 	void WallRunUpdate();
 	//Function for calculting movement along wall run
 	bool WallRunMovement(FVector start, FVector end, float direction);
-	
 	//Wall Run Gate functions
 	void OpenWallRunGate();
 	void CloseWallRunGate();
+
+	//Vertical Wall Run functions
+	void VerticalWallRunUpdate();
+	void VerticalWallRunMovement();
+	void EndVerticalWallRun(float resetTime);
+	bool CanVerticalWallRun();
+	void OpenVerticalWallRunGate();
+	void CloseVerticalWallRunGate();
+
+	//Mantle functions
+	void MantleCheck();
+	void MantleUpdate();
+	FVector GetMantleHighVector();
+	FVector GetMantleLowVector();
+	void OpenMantleCheckGate();
+	void CloseMantleCheckGate();
+	void OpenMantleGate();
+	void CloseMantleGate();
+
 private:
 	// Called when the owning actor hits something (to begin the wall run)
 	//UFUNCTION()
@@ -150,6 +186,10 @@ private:
 	bool SprintKeyDown = false;
 	// Normal vector of the wall the player is running on
 	FVector WallNormal;
+	// Normal vector of the wall player is climbing up
+	FVector VerticalWallNormal;
+	// Trace distance of most recent mantle check
+	float MantleTraceDistance;
 
 	//General update timer handler
 	FTimerHandle ParkourHandle;
@@ -157,6 +197,18 @@ private:
 	//Wall Run Gate variables
 	bool IsWallRunGateOpen = true;
 	FTimerHandle WallRunGateHandle;
+
+	//Vertical Wall Run Gate variables
+	bool IsVerticalWallRunGateOpen;
+	FTimerHandle VerticalWallRunGateHandle;
+
+	//Mantle Check Gate variables
+	bool IsMantleCheckGateOpen;
+	FTimerHandle MantleCheckGateHandle;
+
+	//Mantle Gate variables
+	bool IsMantleGateOpen;
+	FTimerHandle MantleGateHandle;
 
 	//Movement mode variables
 	EMovementMode PrevMovementMode;

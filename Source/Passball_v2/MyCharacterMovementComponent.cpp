@@ -4,6 +4,7 @@
 #include "MyCharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "EParkourMovementMode.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
@@ -510,6 +511,89 @@ void UMyCharacterMovementComponent::WallRunJump()
 	}
 }
 
+bool UMyCharacterMovementComponent::CanVerticalWallRun() {
+	return ForwardInput() > 0.0f && CurrMovementMode == EMovementMode::MOVE_Falling && (CurrParkourMode ==
+		EParkourMovementMode::MOVE_NoParkour || CurrParkourMode == EParkourMovementMode::MOVE_VertWallRun);
+}
+
+void UMyCharacterMovementComponent::EndVerticalWallRun(float resetTime) {
+	if (CurrParkourMode == EParkourMovementMode::MOVE_VertWallRun || CurrParkourMode == EParkourMovementMode::MOVE_LedgeGrab || CurrParkourMode == EParkourMovementMode::MOVE_Mantle) {
+		if (SetParkourMovementMode(EParkourMovementMode::MOVE_NoParkour)) {
+			CloseVerticalWallRunGate();
+			CloseMantleCheckGate();
+			GetWorld()->GetTimerManager().SetTimer(WallRunGateHandle, this, &UMyCharacterMovementComponent::OpenVerticalWallRunGate, resetTime, false);
+		}
+	}
+}
+
+void UMyCharacterMovementComponent::VerticalWallRunUpdate() {
+	if (CanVerticalWallRun()) {
+		FHitResult hit;
+		FCollisionShape pill;
+		pill.ShapeType = ECollisionShape::Capsule;
+		FVector* capsuleExtents = new FVector(20.0f, 20.0f, 10.0f);
+		pill.SetCapsule(*capsuleExtents);
+		if (GetWorld()->SweepSingleByChannel(hit, GetMantleHighVector(), GetMantleLowVector(), FQuat::Identity, ECollisionChannel::ECC_Visibility, pill)) {
+			MantleTraceDistance = hit.Distance;
+			if (IsWalkable(hit)) {
+				//Mantle
+			}
+			else {
+				VerticalWallRunMovement();
+			}
+		}
+		else {
+			VerticalWallRunMovement();
+		}
+	}
+	else {
+		EndVerticalWallRun(.35f);
+	}
+}
+
+void UMyCharacterMovementComponent::VerticalWallRunMovement() {
+	bool onWall = false;
+	FHitResult hit;
+	FVector end = CharacterOwner->GetActorForwardVector() * 50.0f + GetMantleLowVector();
+	if (GetWorld()->LineTraceSingleByChannel(hit, GetMantleLowVector(), end, ECollisionChannel::ECC_Visibility) && ForwardInput() > 0.0f) {
+		VerticalWallNormal = hit.ImpactNormal;
+		SetParkourMovementMode(EParkourMovementMode::MOVE_VertWallRun);
+		FVector* launchVelocity = new FVector(VerticalWallNormal.X * -600.0f, VerticalWallNormal.Y * -600.0f, VerticalWallRunSpeed);
+		CharacterOwner->LaunchCharacter(*launchVelocity, true, true);
+	}
+	else {
+		EndVerticalWallRun(0.35f);
+	}
+
+}
+
+FVector UMyCharacterMovementComponent::GetMantleHighVector() {
+	FVector highVec;
+	FVector outLocation;
+	FRotator outRotation;
+	CharacterOwner->GetController()->GetActorEyesViewPoint(outLocation, outRotation);
+	highVec = outLocation + 50.0f;
+	highVec += CharacterOwner->GetActorForwardVector() * 50.0f;
+	return highVec;
+}
+
+FVector UMyCharacterMovementComponent::GetMantleLowVector() {
+	FVector lowVec = CharacterOwner->GetActorLocation();
+	lowVec.Z -= (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MantleHeight);
+	lowVec += CharacterOwner->GetActorForwardVector() * 50.0f;
+	return lowVec;
+}
+
+void UMyCharacterMovementComponent::MantleCheck() {
+	if (true) { //Check to see if player can mantle
+		SetParkourMovementMode(EParkourMovementMode::MOVE_Mantle);
+	}
+}
+
+void UMyCharacterMovementComponent::MantleUpdate() {
+	//do mantling
+}
+
 void UMyCharacterMovementComponent::ParkourUpdate()
 {
 	if (GetPawnOwner()->GetLocalRole() == ROLE_SimulatedProxy) {
@@ -518,6 +602,15 @@ void UMyCharacterMovementComponent::ParkourUpdate()
 
 	if (IsWallRunGateOpen) {
 		WallRunUpdate();
+	}
+	if (IsVerticalWallRunGateOpen) {
+		VerticalWallRunUpdate();
+	}
+	if (IsMantleCheckGateOpen) {
+		MantleCheck();
+	}
+	if (IsMantleGateOpen) {
+		MantleUpdate();
 	}
 	//if (WantsToSprint) {
 	//	SetParkourMovementMode(EParkourMovementMode::MOVE_Sprint);
@@ -536,35 +629,78 @@ void UMyCharacterMovementComponent::ResetMovement()
 			break;
 		case EParkourMovementMode::MOVE_WallRunRight:
 			SetMovementMode(EMovementMode::MOVE_Falling);
-			break;
-		case EParkourMovementMode::MOVE_Sprint:
+ 		case EParkourMovementMode::MOVE_Sprint:
 			SetMovementMode(EMovementMode::MOVE_Walking);
 			break;
 		}
 	}
 }
 
-void UMyCharacterMovementComponent::PlayCameraShake()
+void UMyCharacterMovementComponent::PlayCameraShake(TSubclassOf<UCameraShakeBase> shake)
 {
-	//CameraShake
+	GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(shake);
 }
 
-//Gate Functions
+//Gate Functions//
 
 void UMyCharacterMovementComponent::OpenWallRunGate()
 {
 	IsWallRunGateOpen = true;
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
 }
 
 void UMyCharacterMovementComponent::CloseWallRunGate()
 {
 	IsWallRunGateOpen = false;
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
 }
 
+void UMyCharacterMovementComponent::OpenVerticalWallRunGate()
+{
+	IsVerticalWallRunGateOpen = true;
+
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
+}
+
+void UMyCharacterMovementComponent::CloseVerticalWallRunGate()
+{
+	IsVerticalWallRunGateOpen = false;
+	CloseMantleGate();
+
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
+}
+
+void UMyCharacterMovementComponent::OpenMantleCheckGate()
+{
+	IsMantleCheckGateOpen = true;
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
+}
+
+void UMyCharacterMovementComponent::CloseMantleCheckGate()
+{
+	IsMantleCheckGateOpen = false;
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
+}
+
+void UMyCharacterMovementComponent::OpenMantleGate()
+{
+	IsMantleGateOpen = true;
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Open"));
+}
+
+void UMyCharacterMovementComponent::CloseMantleGate()
+{
+	IsMantleGateOpen = false;
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Orange, TEXT("Gate Closed"));
+}
 //void UMyCharacterMovementComponent::PhysWallRunning(float deltaTime, int32 Iterations)
 //{
 	// IMPORTANT NOTE: This function (and all other Phys* functions) will be called on characters with ROLE_Authority and ROLE_AutonomousProxy
